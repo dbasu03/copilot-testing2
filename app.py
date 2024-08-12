@@ -1,17 +1,15 @@
 import streamlit as st
 import pandas as pd
-from transformers import AutoTokenizer, AutoModel
-import torch
-import faiss
+import gensim.downloader as api
 import numpy as np
+import faiss
 
 # Constants
 DATA_FILE_PATH = 'OrderedWorkflows.csv'
 INDEX_FILE_PATH = 'faiss_index.index'
 
-# Load the tokenizer and model
-tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
-model = AutoModel.from_pretrained('distilbert-base-uncased')
+# Load the FastText model from Gensim
+model = api.load('fasttext-wiki-news-subwords-300')  # You can choose other available models
 
 # Functions
 
@@ -20,12 +18,15 @@ def load_data(file_path):
     return df
 
 def create_embeddings(text_list):
-    inputs = tokenizer(text_list, return_tensors='pt', padding=True, truncation=True)
-    with torch.no_grad():
-        outputs = model(**inputs)
-    
-    # Use the mean of the last hidden state as the embedding
-    embeddings = [output.mean(dim=0).numpy() for output in outputs.last_hidden_state]
+    embeddings = []
+    for text in text_list:
+        words = text.split()
+        word_embeddings = [model[word] for word in words if word in model]
+        if word_embeddings:
+            embedding = np.mean(word_embeddings, axis=0)
+        else:
+            embedding = np.zeros(300)  # 300 is the dimension of FastText embeddings
+        embeddings.append(embedding)
     return embeddings
 
 def build_faiss_index(embeddings):
