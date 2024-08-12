@@ -1,15 +1,15 @@
 import streamlit as st
 import pandas as pd
-import gensim.downloader as api
 import numpy as np
 import faiss
+import tensorflow_hub as hub
 
 # Constants
 DATA_FILE_PATH = 'OrderedWorkflows.csv'
 INDEX_FILE_PATH = 'faiss_index.index'
 
-# Load the FastText model from Gensim
-model = api.load('fasttext-wiki-news-subwords-300')  # You can choose other available models
+# Load the Universal Sentence Encoder
+embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder/4")
 
 # Functions
 
@@ -18,15 +18,7 @@ def load_data(file_path):
     return df
 
 def create_embeddings(text_list):
-    embeddings = []
-    for text in text_list:
-        words = text.split()
-        word_embeddings = [model[word] for word in words if word in model]
-        if word_embeddings:
-            embedding = np.mean(word_embeddings, axis=0)
-        else:
-            embedding = np.zeros(300)  # 300 is the dimension of FastText embeddings
-        embeddings.append(embedding)
+    embeddings = embed(text_list).numpy()
     return embeddings
 
 def build_faiss_index(embeddings):
