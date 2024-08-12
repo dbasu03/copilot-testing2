@@ -1,11 +1,12 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.neighbors import NearestNeighbors
+import nmslib
 import tensorflow_hub as hub
 
 # Constants
 DATA_FILE_PATH = 'OrderedWorkflows.csv'
+NMSLIB_INDEX_FILE_PATH = 'nmslib_index.nms'
 
 # Load the Universal Sentence Encoder
 embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder/4")
@@ -20,13 +21,22 @@ def create_embeddings(text_list):
     embeddings = embed(text_list).numpy()
     return embeddings
 
-def build_nn_model(embeddings, n_neighbors=10):
-    nn_model = NearestNeighbors(n_neighbors=n_neighbors, metric='cosine')
-    nn_model.fit(embeddings)
-    return nn_model
+def build_nmslib_index(embeddings):
+    # Create NMSLIB index
+    index = nmslib.init(method='hnsw', space='cosinesimil')
+    index.addDataPointBatch(embeddings)
+    index.createIndex({'post': 2}, print_progress=True)
+    index.saveIndex(NMSLIB_INDEX_FILE_PATH)
+    return index
 
-def search_nn_model(nn_model, input_embedding, k):
-    distances, indices = nn_model.kneighbors([input_embedding], n_neighbors=k)
+def load_nmslib_index(embedding_dim):
+    # Load NMSLIB index
+    index = nmslib.init(method='hnsw', space='cosinesimil')
+    index.loadIndex(NMSLIB_INDEX_FILE_PATH, load_data=True)
+    return index
+
+def search_nmslib_index(index, input_embedding, k):
+    indices, distances = index.knnQuery(input_embedding, k=k)
     return distances, indices
 
 # Streamlit app code
@@ -35,10 +45,10 @@ def search_nn_model(nn_model, input_embedding, k):
 def initialize():
     df = load_data(DATA_FILE_PATH)
     embeddings = create_embeddings(df['Workflow'].tolist())
-    nn_model = build_nn_model(embeddings)
-    return df, nn_model
+    index = build_nmslib_index(embeddings)
+    return df, index
 
-df, nn_model = initialize()
+df, index = initialize()
 
 st.title('Workflow Similarity Search')
 
@@ -50,10 +60,10 @@ if user_input:
 
     # Perform similarity search
     k = 10
-    distances, indices = search_nn_model(nn_model, input_embedding, k)
+    distances, indices = search_nmslib_index(index, input_embedding, k)
 
     # Display results
     st.write("Matching Workflows:")
-    matching_workflows = df.iloc[indices[0]]['Workflow'].tolist()
+    matching_workflows = df.iloc[indices]['Workflow'].tolist()
     for workflow in matching_workflows:
         st.write(workflow)
