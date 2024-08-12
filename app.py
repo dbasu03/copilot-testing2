@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-import spacy
+from transformers import AutoTokenizer, AutoModel
+import torch
 import faiss
 import numpy as np
 
@@ -8,8 +9,9 @@ import numpy as np
 DATA_FILE_PATH = 'OrderedWorkflows.csv'
 INDEX_FILE_PATH = 'faiss_index.index'
 
-# Load SpaCy model for embeddings
-nlp = spacy.load('en_core_web_md')  # You can use 'en_core_web_lg' for a larger model
+# Load the tokenizer and model
+tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased')
+model = AutoModel.from_pretrained('distilbert-base-uncased')
 
 # Functions
 
@@ -18,7 +20,12 @@ def load_data(file_path):
     return df
 
 def create_embeddings(text_list):
-    embeddings = [nlp(text).vector for text in text_list]
+    inputs = tokenizer(text_list, return_tensors='pt', padding=True, truncation=True)
+    with torch.no_grad():
+        outputs = model(**inputs)
+    
+    # Use the mean of the last hidden state as the embedding
+    embeddings = [output.mean(dim=0).numpy() for output in outputs.last_hidden_state]
     return embeddings
 
 def build_faiss_index(embeddings):
