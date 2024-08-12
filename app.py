@@ -1,22 +1,14 @@
 import streamlit as st
-from sentence_transformers import SentenceTransformer
 
 def main():
-    # Initialize the SentenceTransformer model
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-
-    st.title('Text Embedding Generator')
-
+    st.title('Simple Streamlit App')
+    
     # User input
     user_input = st.text_input("Enter some text:")
-
+    
     if user_input:
-        # Generate embedding
-        embedding = model.encode(user_input)
-        
-        # Display the embedding
-        st.write("Text Embedding:")
-        st.write(embedding)
+        # Display user input
+        st.write(f"You entered: {user_input}")
 
 if __name__ == "__main__":
     main()
