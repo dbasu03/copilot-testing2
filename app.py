@@ -1,29 +1,34 @@
 import numpy as np
 import pandas as pd
-from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 
-# Load the Iris dataset
-iris = load_iris()
-X, y = iris.data, iris.target
+# Small dataset example
+data = {
+    'Feature1': [5.1, 4.9, 4.7, 4.6, 5.0],
+    'Feature2': [3.5, 3.0, 3.2, 3.1, 3.6],
+    'Feature3': [1.4, 1.4, 1.3, 1.5, 1.4],
+    'Feature4': [0.2, 0.2, 0.2, 0.2, 0.2],
+    'Target': [0, 0, 0, 0, 0]  # Example target values
+}
 
-# Convert to pandas DataFrame for easier manipulation
-df = pd.DataFrame(data=X, columns=iris.feature_names)
-df['target'] = y
+# Convert to DataFrame
+df = pd.DataFrame(data)
 
-# Print dataset description
-print("Dataset Description:")
-print(iris.DESCR)
+# Print dataset
+print("Small Dataset:")
+print(df)
 
-# Print the first few rows of the dataset
-print("\nFirst 5 rows of the dataset:")
-print(df.head())
+# Input example
+input_feature1 = float(input("Enter a value for Feature1: "))
+input_feature2 = float(input("Enter a value for Feature2: "))
+input_feature3 = float(input("Enter a value for Feature3: "))
+input_feature4 = float(input("Enter a value for Feature4: "))
 
-# Print the target labels for the first 5 rows
-print("\nTarget labels for the first 5 rows:")
-print(df['target'].head())
+# Prepare features and target for training
+X = df[['Feature1', 'Feature2', 'Feature3', 'Feature4']].values
+y = df['Target'].values
 
 # Split the dataset into training and test sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
@@ -39,9 +44,8 @@ predictions = model.predict(X_test)
 accuracy = accuracy_score(y_test, predictions)
 print(f"\nModel Accuracy: {accuracy:.2f}")
 
-# Convert predictions to pandas DataFrame for easier viewing
-predictions_df = pd.DataFrame(data={'Actual': y_test, 'Predicted': predictions})
+# Predict for the user input
+user_input = np.array([[input_feature1, input_feature2, input_feature3, input_feature4]])
+user_prediction = model.predict(user_input)
 
-# Print a few rows of the predictions DataFrame
-print("\nSample of Predictions:")
-print(predictions_df.head())
+print(f"\nPrediction for input features {user_input}: {user_prediction[0]}")
