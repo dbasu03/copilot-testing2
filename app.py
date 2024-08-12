@@ -32,4 +32,24 @@ model.fit(X_train, y_train)
 st.title('Simple ML Model with User Input')
 
 # Input fields for the features
-input_feature1 = st.number_input("Enter a value for Feature1:", value=
+input_feature1 = st.number_input("Enter a value for Feature1:", value=0.0)
+input_feature2 = st.number_input("Enter a value for Feature2:", value=0.0)
+input_feature3 = st.number_input("Enter a value for Feature3:", value=0.0)
+input_feature4 = st.number_input("Enter a value for Feature4:", value=0.0)
+
+# Predict for the user input
+if st.button('Predict'):
+    user_input = np.array([[input_feature1, input_feature2, input_feature3, input_feature4]])
+    user_prediction = model.predict(user_input)
+    st.write(f"Prediction for input features {user_input}: {user_prediction[0]}")
+
+# Display dataset and model accuracy
+st.write("Small Dataset:")
+st.write(df)
+
+# Make predictions on the test set
+predictions = model.predict(X_test)
+
+# Evaluate the model's accuracy
+accuracy = accuracy_score(y_test, predictions)
+st.write(f"Model Accuracy: {accuracy:.2f}")
