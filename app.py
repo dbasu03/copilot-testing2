@@ -1,76 +1,61 @@
+# app.py
+
 import streamlit as st
-import pandas as pd
 from sentence_transformers import SentenceTransformer, util
-import faiss
-import numpy as np
-import io
+import torch
+import pandas as pd
 
-# Constants
-INDEX_FILE_PATH = 'faiss_index.index'
-
-# Functions from pyfile.py
-
-def create_embeddings(text_list):
+# Load a pre-trained model from sentence-transformers
+@st.cache(allow_output_mutation=True)
+def load_model():
     model = SentenceTransformer('all-MiniLM-L6-v2')
-    embeddings = model.encode(text_list)
-    return embeddings
+    return model
 
-def build_faiss_index(embeddings):
-    embeddings_np = np.array(embeddings)
-    dimension = embeddings_np.shape[1]
-    index = faiss.IndexFlatL2(dimension)
-    index.add(embeddings_np)
-    return index
+# Load model
+model = load_model()
 
-def save_faiss_index(index, index_file_path):
-    faiss.write_index(index, index_file_path)
-
-def load_faiss_index(index_file_path):
-    return faiss.read_index(index_file_path)
-
-def search_index(index, input_embedding, k):
-    distances, indices = index.search(np.array([input_embedding]), k)
-    return distances, indices
-
-# Main function
+# Streamlit app
 def main():
-    st.title('Workflow Similarity Search')
-
-    # File uploader widget
-    uploaded_file = st.file_uploader("Upload your CSV file", type="csv")
-
-    if uploaded_file:
-        # Load data from uploaded file
-        df = pd.read_csv(uploaded_file)
+    st.title('Text Similarity with Sentence Transformers')
+    st.write('Enter a piece of text to calculate its similarity with texts from a CSV file:')
+    
+    # Upload CSV file
+    csv_file = st.file_uploader("Upload CSV File", type=["csv"])
+    
+    if csv_file is not None:
+        # Load CSV file
+        df = pd.read_csv(csv_file)
         
+        # Check if the CSV has a 'text' column
         if 'Workflow' not in df.columns:
-            st.error("The uploaded file must contain a 'Workflow' column.")
+            st.error("CSV file must contain a 'text' column.")
             return
         
-        embeddings = create_embeddings(df['Workflow'].tolist())
-        index = build_faiss_index(embeddings)
-        save_faiss_index(index, INDEX_FILE_PATH)
+        # Display CSV data
+        st.write("CSV Data:")
+        st.dataframe(df)
 
-        st.write("File uploaded and index created successfully!")
+        # Text input
+        user_text = st.text_area("Input Text", "Type your text here...")
 
-        user_input = st.text_input("Enter your query:")
-
-        if user_input:
-            # Create embedding for user input
-            input_embedding = create_embeddings([user_input])[0]
-
-            # Perform similarity search
-            k = 10
-            distances, indices = search_index(index, input_embedding, k)
-
-            # Display results
-            st.write("Matching Workflows:")
-            matching_workflows = df.iloc[indices[0]]['Workflow'].tolist()
-            for workflow in matching_workflows:
-                st.write(workflow)
+        if st.button('Calculate Similarity'):
+            if user_text:
+                # Compute embeddings
+                user_embedding = model.encode(user_text, convert_to_tensor=True)
+                
+                # Compute embeddings for each text in the CSV
+                df['embedding'] = df['Workflow'].apply(lambda x: model.encode(x, convert_to_tensor=True))
+                
+                # Calculate cosine similarity for each row
+                df['similarity'] = df['embedding'].apply(lambda emb: util.pytorch_cos_sim(user_embedding, emb).item())
+                
+                # Display results
+                st.write("Similarity Scores:")
+                st.dataframe(df[['Workflow', 'similarity']].sort_values(by='similarity', ascending=False))
+            else:
+                st.write("Please enter some text.")
     else:
-        st.info("Please upload a CSV file.")
+        st.write("Please upload a CSV file.")
 
-# Run the app
 if __name__ == "__main__":
     main()
