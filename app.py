@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from annoy import AnnoyIndex
+from sklearn.neighbors import NearestNeighbors
 import tensorflow_hub as hub
 
 # Constants
 DATA_FILE_PATH = 'OrderedWorkflows.csv'
-ANNOY_INDEX_FILE_PATH = 'annoy_index.ann'
 
 # Load the Universal Sentence Encoder
 embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder/4")
@@ -21,23 +20,14 @@ def create_embeddings(text_list):
     embeddings = embed(text_list).numpy()
     return embeddings
 
-def build_annoy_index(embeddings, num_trees=10):
-    dimension = embeddings.shape[1]
-    annoy_index = AnnoyIndex(dimension, metric='angular')
-    for i, embedding in enumerate(embeddings):
-        annoy_index.add_item(i, embedding)
-    annoy_index.build(num_trees)
-    annoy_index.save(ANNOY_INDEX_FILE_PATH)
-    return annoy_index
+def build_nn_model(embeddings, n_neighbors=10):
+    nn_model = NearestNeighbors(n_neighbors=n_neighbors, metric='cosine')
+    nn_model.fit(embeddings)
+    return nn_model
 
-def load_annoy_index(embedding_dim):
-    annoy_index = AnnoyIndex(embedding_dim, metric='angular')
-    annoy_index.load(ANNOY_INDEX_FILE_PATH)
-    return annoy_index
-
-def search_annoy_index(annoy_index, input_embedding, k):
-    indices = annoy_index.get_nns_by_vector(input_embedding, k, include_distances=True)
-    return indices
+def search_nn_model(nn_model, input_embedding, k):
+    distances, indices = nn_model.kneighbors([input_embedding], n_neighbors=k)
+    return distances, indices
 
 # Streamlit app code
 
@@ -45,10 +35,10 @@ def search_annoy_index(annoy_index, input_embedding, k):
 def initialize():
     df = load_data(DATA_FILE_PATH)
     embeddings = create_embeddings(df['Workflow'].tolist())
-    annoy_index = build_annoy_index(embeddings)
-    return df, annoy_index
+    nn_model = build_nn_model(embeddings)
+    return df, nn_model
 
-df, annoy_index = initialize()
+df, nn_model = initialize()
 
 st.title('Workflow Similarity Search')
 
@@ -60,7 +50,7 @@ if user_input:
 
     # Perform similarity search
     k = 10
-    indices = search_annoy_index(annoy_index, input_embedding, k)
+    distances, indices = search_nn_model(nn_model, input_embedding, k)
 
     # Display results
     st.write("Matching Workflows:")
