@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import faiss
+from sklearn.neighbors import NearestNeighbors
 import tensorflow_hub as hub
 
 # Constants
 DATA_FILE_PATH = 'OrderedWorkflows.csv'
-INDEX_FILE_PATH = 'faiss_index.index'
 
 # Load the Universal Sentence Encoder
 embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder/4")
@@ -21,21 +20,13 @@ def create_embeddings(text_list):
     embeddings = embed(text_list).numpy()
     return embeddings
 
-def build_faiss_index(embeddings):
-    embeddings_np = np.array(embeddings)
-    dimension = embeddings_np.shape[1]
-    index = faiss.IndexFlatL2(dimension)
-    index.add(embeddings_np)
-    return index
+def build_nn_model(embeddings, n_neighbors=10):
+    nn_model = NearestNeighbors(n_neighbors=n_neighbors, metric='cosine')
+    nn_model.fit(embeddings)
+    return nn_model
 
-def save_faiss_index(index, index_file_path):
-    faiss.write_index(index, index_file_path)
-
-def load_faiss_index(index_file_path):
-    return faiss.read_index(index_file_path)
-
-def search_index(index, input_embedding, k):
-    distances, indices = index.search(np.array([input_embedding]), k)
+def search_nn_model(nn_model, input_embedding, k):
+    distances, indices = nn_model.kneighbors([input_embedding], n_neighbors=k)
     return distances, indices
 
 # Streamlit app code
@@ -44,11 +35,10 @@ def search_index(index, input_embedding, k):
 def initialize():
     df = load_data(DATA_FILE_PATH)
     embeddings = create_embeddings(df['Workflow'].tolist())
-    index = build_faiss_index(embeddings)
-    save_faiss_index(index, INDEX_FILE_PATH)
-    return df, index
+    nn_model = build_nn_model(embeddings)
+    return df, nn_model
 
-df, index = initialize()
+df, nn_model = initialize()
 
 st.title('Workflow Similarity Search')
 
@@ -60,7 +50,7 @@ if user_input:
 
     # Perform similarity search
     k = 10
-    distances, indices = search_index(index, input_embedding, k)
+    distances, indices = search_nn_model(nn_model, input_embedding, k)
 
     # Display results
     st.write("Matching Workflows:")
