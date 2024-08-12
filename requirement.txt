@@ -1,3 +1,4 @@
+annoy
 scikit-learn
 tensorflow-hub
 gensim
