@@ -1,20 +1,15 @@
 import streamlit as st
-import pandas as pd
 import numpy as np
-import tensorflow_hub as hub
-from sentence_transformers import SentenceTransformer
 
-# Load the CSV file from the current directory
-@st.cache_data
-def load_data():
-    data = pd.read_csv('sample_data.csv')
-    return data
+# Title of the app
+st.title('Simple Streamlit App with NumPy')
 
-# Streamlit app
-st.title("Simple CSV Viewer")
+# Input fields for numbers
+num1 = st.number_input("Enter the first number:", value=0)
+num2 = st.number_input("Enter the second number:", value=0)
 
-data = load_data()
+# Calculate the sum using NumPy
+result = np.add(num1, num2)
 
-st.write("Here's the data from the CSV file:")
-st.dataframe(data)
-
+# Display the result
+st.write("The sum of the two numbers is:", result)
