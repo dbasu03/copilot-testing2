@@ -7,4 +7,5 @@ transformers
 torch  
 spacy
 faiss-cpu
+nmslibnmslib
 pandas
