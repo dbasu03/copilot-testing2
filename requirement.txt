@@ -1,5 +1,5 @@
 scikit-learn
-tensorflow
+tensorflow-hub
 gensim
 streamlit
 transformers
