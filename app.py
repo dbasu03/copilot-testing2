@@ -1,5 +1,6 @@
 import streamlit as st
 import numpy as np
+import scikit-learn
 
 # Title of the app
 st.title('Simple Streamlit App with NumPy')
