@@ -37,4 +37,39 @@ def build_hnsw_index(embeddings):
     return hnsw_index
 
 def load_hnsw_index(embedding_dim):
-    hnsw_index = hnswlib.Index(space='cosine', dim
+    hnsw_index = hnswlib.Index(space='cosine', dim=embedding_dim)
+    hnsw_index.load_index(HNSW_INDEX_FILE_PATH)
+    return hnsw_index
+
+def search_hnsw_index(hnsw_index, input_embedding, k):
+    indices, distances = hnsw_index.knn_query(input_embedding, k=k)
+    return distances, indices
+
+# Streamlit app code
+
+@st.cache
+def initialize():
+    df = load_data(DATA_FILE_PATH)
+    embeddings = create_embeddings(df['Workflow'].tolist())
+    hnsw_index = build_hnsw_index(embeddings)
+    return df, hnsw_index
+
+df, hnsw_index = initialize()
+
+st.title('Workflow Similarity Search')
+
+user_input = st.text_input("Enter your query:")
+
+if user_input:
+    # Create embedding for user input
+    input_embedding = create_embeddings([user_input])[0]
+
+    # Perform similarity search
+    k = 10
+    distances, indices = search_hnsw_index(hnsw_index, input_embedding, k)
+
+    # Display results
+    st.write("Matching Workflows:")
+    matching_workflows = df.iloc[indices[0]]['Workflow'].tolist()
+    for workflow in matching_workflows:
+        st.write(workflow)
