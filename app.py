@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import numoy as np
+import numpy as np
 
 # Load the CSV file from the current directory
 @st.cache_data
