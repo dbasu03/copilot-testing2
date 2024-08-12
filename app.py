@@ -1,7 +1,5 @@
 import streamlit as st
-import numpy as np
-import scikit-learn
-
+import numpy as npfrom sklearn.datasets import load_iris
 # Title of the app
 st.title('Simple Streamlit App with NumPy')
 
