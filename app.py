@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import hnswlib
+from pynndescent import NNDescent
 import tensorflow_hub as hub
 
 # Constants
 DATA_FILE_PATH = 'OrderedWorkflows.csv'
-HNSW_INDEX_FILE_PATH = 'hnsw_index.bin'
 
 # Load the Universal Sentence Encoder
 embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder/4")
@@ -21,29 +20,14 @@ def create_embeddings(text_list):
     embeddings = embed(text_list).numpy()
     return embeddings
 
-def build_hnsw_index(embeddings):
-    dimension = embeddings.shape[1]
-    num_elements = embeddings.shape[0]
+def build_pynndescent_index(embeddings):
+    # Create PyNNDescent index
+    pynnd_index = NNDescent(embeddings, metric='cosine', n_neighbors=10)
+    return pynnd_index
 
-    # Initialize HNSWlib index
-    hnsw_index = hnswlib.Index(space='cosine', dim=dimension)
-    hnsw_index.init_index(max_elements=num_elements, ef_construction=200, M=16)
-    
-    # Add items to the index
-    hnsw_index.add_items(embeddings)
-    
-    # Save the index to a file
-    hnsw_index.save_index(HNSW_INDEX_FILE_PATH)
-    return hnsw_index
-
-def load_hnsw_index(embedding_dim):
-    hnsw_index = hnswlib.Index(space='cosine', dim=embedding_dim)
-    hnsw_index.load_index(HNSW_INDEX_FILE_PATH)
-    return hnsw_index
-
-def search_hnsw_index(hnsw_index, input_embedding, k):
-    indices, distances = hnsw_index.knn_query(input_embedding, k=k)
-    return distances, indices
+def search_pynndescent_index(pynnd_index, input_embedding, k):
+    indices, distances = pynnd_index.query([input_embedding], k=k)
+    return distances[0], indices[0]
 
 # Streamlit app code
 
@@ -51,10 +35,10 @@ def search_hnsw_index(hnsw_index, input_embedding, k):
 def initialize():
     df = load_data(DATA_FILE_PATH)
     embeddings = create_embeddings(df['Workflow'].tolist())
-    hnsw_index = build_hnsw_index(embeddings)
-    return df, hnsw_index
+    pynnd_index = build_pynndescent_index(embeddings)
+    return df, pynnd_index
 
-df, hnsw_index = initialize()
+df, pynnd_index = initialize()
 
 st.title('Workflow Similarity Search')
 
@@ -66,10 +50,10 @@ if user_input:
 
     # Perform similarity search
     k = 10
-    distances, indices = search_hnsw_index(hnsw_index, input_embedding, k)
+    distances, indices = search_pynndescent_index(pynnd_index, input_embedding, k)
 
     # Display results
     st.write("Matching Workflows:")
-    matching_workflows = df.iloc[indices[0]]['Workflow'].tolist()
+    matching_workflows = df.iloc[indices]['Workflow'].tolist()
     for workflow in matching_workflows:
         st.write(workflow)
