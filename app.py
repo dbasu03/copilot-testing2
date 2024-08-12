@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+from sentence_transformers import SentenceTransformer
+
 # Load the CSV file from the current directory
 @st.cache_data
 def load_data():
